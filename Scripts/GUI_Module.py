@@ -561,8 +561,8 @@ class UIController(QWidget):
         self._functionButton[-1].addItems(self._functionCategory)
         self._functionButton[-1].setCurrentText(self.systemController.stimulationProtocol._functionData[index])
         self._timeButton.append(QSpinBox())
+        self._timeButton[len(self._timeButton)-1].setMaximum(3600)
         self._timeButton[len(self._timeButton)-1].setValue(self.systemController.stimulationProtocol._durationData[index])
-        self._timeButton[len(self._timeButton)-1].setMaximum(10000)
         self._frequencyButton.append(QSpinBox())
         self._frequencyButton[-1].setMinimum(1)
         self._frequencyButton[-1].setValue(self.systemController.stimulationProtocol._frequencyData[index])
@@ -696,6 +696,12 @@ class UIController(QWidget):
         plot.plot().setData(x0, y, pen = "b")
         plot.setXRange(0,x0[-1])
         self.systemController.arduinoController.SensorResultDurationData["Signal"] = x0
+
+        for i in range(0, len(self._frequencyButton)):
+            if self.systemController.stimulationProtocol.GetAction() == 2:
+                self._frequencyButton[i].setValue(1)
+                self._frequencyButton[i].setDisabled(True)
+                self._deadTimeButton[i].setDisabled(True)
     
 
     ### 更新實時訊號圖表
@@ -758,7 +764,6 @@ class UIController(QWidget):
                         self._currentOpenSensorRealtimePlot[key].plot().setData(self.systemController.GetTimelineData(sensorType = key), self.systemController.GetValueData(sensorType = key), pen = "b")
                         if self.systemController.sensorDetectionProtocol.GetTheVauleOfIsSensorChangeSignal() == True:
                             self._currentOpenSensorRealtimePlot[key].plot().setData([0, self.totalDuration], [self. systemController.sensorDetectionProtocol.GetSensorThresholdData(sensorType = key), self. systemController.sensorDetectionProtocol.GetSensorThresholdData(sensorType = key)], pen ='r')
-                        
     ### 將表格變為空白表格
     def RenewProtocolTableToBlank(self):
         self._rowHeader.clear()
@@ -856,6 +861,7 @@ class UIController(QWidget):
         self.systemController.OutputStimulationSettingToArduino()
         self.systemController._eventSignal.clear()
         sensorOpenData = self.systemController.sensorDetectionProtocol.GetAllSensorOpenData()
+        self.systemController.arduinoController.ClearAllRealtimeData()
         for key in sensorOpenData:
             if sensorOpenData[key] == True:
                 self._currentOpenSensorCheckbox[key] = self._sensorCheckbox[key]
