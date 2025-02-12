@@ -18,8 +18,6 @@
 */
 #include <Wire.h>
 
-unsigned long int myTime= 0 ;
-unsigned long int tCheck = 0;
 int freqT = 0;
 int delayT = 10;
 int ADXL345 = 0x53;
@@ -32,7 +30,7 @@ String str = "";
 int action = 0;
 String function[30]; 
 int frequency[30];
-int duration[30]; 
+unsigned long duration[30]; 
 int deadTime[30];
 int currentPeriod = 0;
 int currentTime;
@@ -70,6 +68,7 @@ bool overVibrationThreshold = false;
 bool overCameraThreshold = false;
 bool isDetectionOnly = false;
 bool isSendingCommand = false;
+bool isReverseSignalOutput = false;
 
 void setup() {
   // put your setup code here, to run once:
@@ -107,6 +106,11 @@ void loop() {
       {
         state = "Action";
         Serial.println(str);
+      }
+      else if(str == "MagneticSystem")
+      {
+        state = "";
+        Serial.println("SystemCheck");
       }
       else if(str == "StimulationTime")
       {
@@ -318,71 +322,68 @@ void loop() {
 
 void Freqstart(){
   if(action == 0){
-    digitalWrite(devicePin1, HIGH);
-    digitalWrite(2,HIGH);//control1
-    digitalWrite(4,HIGH);//control2
-    digitalWrite(6,HIGH);//control3
-    digitalWrite(8,HIGH);//control4
-    digitalWrite(10,HIGH);//control5
-    digitalWrite(12,HIGH);//control6
-
-    digitalWrite(devicePin2, LOW);
-    digitalWrite(3,LOW);//control1
-    digitalWrite(5,LOW);//control2
-    digitalWrite(7,LOW);//control3
-    digitalWrite(9,LOW);//control4
-    digitalWrite(11,LOW);//control5
-    digitalWrite(13,LOW);//control6
-    Detection();
-    delay(freqT);//100->5Hz; 50 -> 10hz; 25 -> 20hz
-    SignalAllLow();
-    delay(delayT);
-    Detection();
-    
-    delay(freqT);//100->5Hz; 50 -> 10hz; 25 -> 20hz
-    SignalAllLow();
-    delay(delayT);
+    if(isReverseSignalOutput == false){
+      digitalWrite(devicePin1, HIGH);
+      digitalWrite(2,HIGH);//control1
+      digitalWrite(4,HIGH);//control2
+      digitalWrite(6,HIGH);//control3
+      digitalWrite(8,HIGH);//control4
+      digitalWrite(10,HIGH);//control5
+      digitalWrite(12,HIGH);//control6
+  
+      digitalWrite(devicePin2, LOW);
+      digitalWrite(3,LOW);//control1
+      digitalWrite(5,LOW);//control2
+      digitalWrite(7,LOW);//control3
+      digitalWrite(9,LOW);//control4
+      digitalWrite(11,LOW);//control5
+      digitalWrite(13,LOW);//control6
+      isReverseSignalOutput = true;
+    }
+    else{
+      SignalAllLow();
+      isReverseSignalOutput = false;
+    }
   }
   else if(action == 1){
-    digitalWrite(devicePin1, HIGH);
-    digitalWrite(2,HIGH);//control1
-    digitalWrite(4,HIGH);//control2
-    digitalWrite(6,HIGH);//control3
-    digitalWrite(8,HIGH);//control4
-    digitalWrite(10,HIGH);//control5
-    digitalWrite(12,HIGH);//control6
+    if(isReverseSignalOutput == false){
+      digitalWrite(devicePin1, HIGH);
+      digitalWrite(2,HIGH);//control1
+      digitalWrite(4,HIGH);//control2
+      digitalWrite(6,HIGH);//control3
+      digitalWrite(8,HIGH);//control4
+      digitalWrite(10,HIGH);//control5
+      digitalWrite(12,HIGH);//control6
+  
+      digitalWrite(devicePin2, LOW);
+      digitalWrite(3,LOW);//control1
+      digitalWrite(5,LOW);//control2
+      digitalWrite(7,LOW);//control3
+      digitalWrite(9,LOW);//control4
+      digitalWrite(11,LOW);//control5
+      digitalWrite(13,LOW);//control6
 
-    digitalWrite(devicePin2, LOW);
-    digitalWrite(3,LOW);//control1
-    digitalWrite(5,LOW);//control2
-    digitalWrite(7,LOW);//control3
-    digitalWrite(9,LOW);//control4
-    digitalWrite(11,LOW);//control5
-    digitalWrite(13,LOW);//control6
-    Detection();
-    delay(freqT);//100->5Hz; 50 -> 10hz; 25 -> 20hz
-    SignalAllLow();
-    delay(delayT);
+      isReverseSignalOutput = true;
+    }
+    else{
+      digitalWrite(devicePin1, LOW);
+      digitalWrite(2,LOW);//control1
+      digitalWrite(4,LOW);//control2
+      digitalWrite(6,LOW);//control3
+      digitalWrite(8,LOW);//control4
+      digitalWrite(10,LOW);//control5
+      digitalWrite(12,LOW);//control6
+  
+      digitalWrite(devicePin2, HIGH);
+      digitalWrite(3,HIGH);//control1
+      digitalWrite(5,HIGH);//control2
+      digitalWrite(7,HIGH);//control3
+      digitalWrite(9,HIGH);//control4
+      digitalWrite(11,HIGH);//control5
+      digitalWrite(13,HIGH);//control6
 
-    digitalWrite(devicePin1, LOW);
-    digitalWrite(2,LOW);//control1
-    digitalWrite(4,LOW);//control2
-    digitalWrite(6,LOW);//control3
-    digitalWrite(8,LOW);//control4
-    digitalWrite(10,LOW);//control5
-    digitalWrite(12,LOW);//control6
-
-    digitalWrite(devicePin2, HIGH);
-    digitalWrite(3,HIGH);//control1
-    digitalWrite(5,HIGH);//control2
-    digitalWrite(7,HIGH);//control3
-    digitalWrite(9,HIGH);//control4
-    digitalWrite(11,HIGH);//control5
-    digitalWrite(13,HIGH);//control6
-    Detection();
-    delay(freqT);//100->5Hz; 50 -> 10hz; 25 -> 20hz
-    SignalAllLow();
-    delay(delayT);
+      isReverseSignalOutput = false;
+    }
   }
   else
   {
@@ -393,9 +394,7 @@ void Freqstart(){
     digitalWrite(8,HIGH);//control4
     digitalWrite(10,HIGH);//control5
     digitalWrite(12,HIGH);//control6
-
-    Detection();
-
+    
     digitalWrite(devicePin2, LOW);
     digitalWrite(3,LOW);//control1
     digitalWrite(5,LOW);//control2
@@ -425,22 +424,35 @@ void SignalAllLow(){ // Both IN1 & IN2 LOW
 
 void Stimulation(){
   while(stimulationIndex <= Stime){           // 開始刺激，刺激5次，每次開啟30秒，休息1分鐘，刺激頻率10Hz
-    Serial.println("Check1");
-    myTime = millis();
-    tCheck = myTime + (duration[stimulationIndex]*1000);
-    Serial.println("Check3");
+    unsigned long int detectionTiming = 0;
+    unsigned long int stimulationTiming = 0;
+    unsigned long int tCheck = 0;
+    detectionTiming = millis();
+    stimulationTiming = detectionTiming;
+    tCheck = detectionTiming + (duration[stimulationIndex]*1000);
+    delayT = deadTime[stimulationIndex];
+    freqT = 500/frequency[stimulationIndex];
     while(millis() <= tCheck){
-      if(millis() >= myTime + 50)
-      {
-        Serial.println("Check2");
+      if(millis() >= detectionTiming){
         Detection();
-        myTime = millis();
+        detectionTiming = millis() + 50;
+      }
+      if(isAllStop == true){
+        break;
       }
       if(function[stimulationIndex] == "1"){
         if(overCameraThreshold == false && overMagneticFieldThreshold == false && overSoundThreshold == false && overTemperatureThreshold == false && overVibrationThreshold == false){
-          delayT = deadTime[stimulationIndex];
-          freqT = (500/frequency[stimulationIndex])- delayT;
-          Freqstart();
+          if(millis()>= stimulationTiming){
+            Freqstart();
+            stimulationTiming = millis() + freqT;
+
+            if(millis() >= detectionTiming - 50){
+              Detection();
+            }
+          }
+          else if(millis()>= stimulationTiming - delayT && delayT != 0){
+            SignalAllLow();
+          }
         }
         else
         {
@@ -458,10 +470,8 @@ void Stimulation(){
     else{
       stimulationIndex+= 1;
     }
-    Serial.println("inside");
   }
   SignalAllLow();
-  Serial.println("not out");
 }
 
 void Detection(){
@@ -559,6 +569,7 @@ void Detection(){
         isAllStop = true;
         stimulationIndex = 0;
         state = "";
+        Serial.println(str);
       }
       else if(str == "Pause")
       {
