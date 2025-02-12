@@ -21,25 +21,62 @@ class ArduinoController:
         self.ser.write(bytes(str(text) + "\n", 'utf-8'))
     
     def AutoSearchArduino(self):
+        IsArduinoGet = False
+        comNumber = None
         ports = self.GetCurrentPortsAvailable()
+        selectComport = None
         if len(ports) == 0:
             self.comPort = ""
             self.ser = None
             return "Arduino is not found."
-        elif len(ports) > 1:
-            self.comPort = ports[0]
-            self.ser = serial.Serial(self.comPort , self.baudRates, timeout=0.5)
-            return "Multiple Arduino is found. The first one is selected."
-        else: 
-            self.comPort = ports[0]
-            self.ser = serial.Serial(self.comPort , self.baudRates, timeout=0.5)
-            return "Arduino " + self.comPort + " is found."
+        else:
+            self.comPort = ""
+            for i in range(0, len(ports)):
+                self.comPort = ports[i]
+                self.ser = serial.Serial(self.comPort , self.baudRates, timeout=0.5)
+                checkPoint = ""
+                checkTime = 0
+                while checkPoint != "SystemCheck" and IsArduinoGet == False:
+                    if checkTime != 10:
+                        self.OutputTextToArduino("MagneticSystem")
+                        data_raw = self.ser.readline()
+                        data = data_raw.decode()
+                        data = data.replace("\n", "")
+                        data = data.replace("\r", "")
+                        checkPoint = data
+                        if checkPoint == "SystemCheck":
+                            IsArduinoGet = True
+                        else:
+                            checkTime += 1
+                    else:
+                        break
+                if comNumber == None and checkPoint == "SystemCheck":
+                    comNumber = i
+                    selectComport = ports[comNumber]
+            if comNumber != None:
+                try:
+                    self.ser = None
+                    self.comPort = selectComport
+                    self.ser = serial.Serial(self.comPort , self.baudRates, timeout=0.5)
+                    return "Arduino is found. The "+ str(self.comPort) +" is selected."
+                except:
+                    return "The "+ str(self.comPort) +" cannot be connected. Please check the Arduino."
+            else:
+                return "Arduino is not found."
     
     def GetCurrentPortsAvailable(self):
-        ports = []
-        for port in serial.tools.list_ports.comports():
-            ports.append(port.name)
-        return ports
+        ports = serial.tools.list_ports.comports()
+        available_ports = []
+        
+        for port in ports:
+            try:
+                s = serial.Serial(port.device)
+                s.close()
+                available_ports.append(port.device)
+            except serial.SerialException:
+                pass
+
+        return available_ports
 
         ##Search Arduino with port number
     def SetComPortAndSearchArduino(self, text):     
@@ -71,6 +108,7 @@ class ArduinoController:
             data = data_raw.decode()
             data = data.replace("\n", "")
             data = data.replace("\r", "")
+            #print(data)
             if self.detectionState == "":    
                 self.detectionState = data
                 self.isSignalWriting = False
