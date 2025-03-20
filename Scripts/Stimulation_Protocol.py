@@ -84,6 +84,7 @@ class StimulationProtocol:
     def SetTotalDuration(self, duration:int):
         self._totalDuration = duration
 
+    ### Make the protocol back to the default one
     def RenewToDefaultData(self):
         self.ClearAllData()
         self.SetAction(0)
@@ -93,6 +94,7 @@ class StimulationProtocol:
         self.AppendFrequencyData([1]*10)
         self.AppendDeadTimeData([0]*10)
 
+    ### Clear the protocol
     def ClearAllData(self):
         self._stepData.clear()
         self._functionData.clear()
@@ -100,6 +102,7 @@ class StimulationProtocol:
         self._frequencyData.clear()
         self._deadTimeData.clear()
 
+    ### Add new column in the protocol
     def AddNewColumnData(self):
         self._stepData.append("Step"+str(len(self._stepData)+1))
         self._functionData.append("Rest")
@@ -107,6 +110,7 @@ class StimulationProtocol:
         self._frequencyData.append(1)
         self._deadTimeData.append(0)
     
+    ### Delete the last column in the protocol
     def DeleteLastColumnData(self):
         del(self._stepData[-1])
         del(self._functionData[-1])
