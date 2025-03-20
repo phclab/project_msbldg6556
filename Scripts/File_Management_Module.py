@@ -11,13 +11,16 @@ class FileController:
     _lastestProtocolFolder = r'\lastest protocol' 
     _fileType = r'\*csv'
 
+    ### Set the file path
     def SetFilePath(self, cwd):
         os.chdir(cwd)
         self._cwd = os.getcwd()
 
+    ### Set the systemController
     def SetSystemController(self, controller):
         self._systemController = controller
 
+    ### Auto Search the lastest parameter csv file in the file path
     def AutoSearchLastestParameters(self):
         files = glob.glob(self._cwd + self._lastestProtocolFolder + self._fileType)
         if len(files) != 0:
@@ -26,7 +29,8 @@ class FileController:
             return True, readFile
         else:
             return False, ""
-        
+    
+    ### Save the lastest parameter csv file in the file path
     def SaveLastestParameters(self, isSensorChangeSignal, magneticSensor, temperatureSensor, vibrationSensor, soundSensor, magneticThreshold, temperatureThreshold, vibrationThreshold, soundThreshold, cameraSensor, contourColor, currentBehaviorType, currentAreaTriggerType, leftCameraThreshold, rightCameraThreshold, action, stepList, functionData, durationData, frequencyData, deadTimeData):
         if not os.path.exists(self._cwd + self._lastestProtocolFolder):
             os.makedirs(self._cwd + self._lastestProtocolFolder)
@@ -53,7 +57,7 @@ class FileController:
                       'Dead Time':deadTimeData
                       }).to_csv(self._cwd + self._lastestProtocolFolder +"/"+"Last Protocol Setting.csv")
 
-    ##Load Stimulation Protocol
+    ### Load Stimulation Protocol csv file
     def LoadStimulationProtocolFile(self, uiController):
         fileNameChoose, filetype = QtWidgets.QFileDialog.getOpenFileName(uiController,  "Load File",  self._cwd, "All Files (*);;Text Files (*.csv)")
         if fileNameChoose != "":
@@ -63,6 +67,7 @@ class FileController:
         else:
             uiController.SetStopMessage("You didn't choose any file")
 
+    ### Save Stimulation Protocol csv file
     def SaveStimulationProtocolFile(self, uiController, isSensorChangeSignal, contourColor, currentBehaviorType, currentAreaTriggerType, action, stepList, functionData, durationData, frequencyData, deadTimeData):
         try:
             fileNameChoose, filetype = QtWidgets.QFileDialog.getSaveFileName(uiController,  
@@ -87,6 +92,7 @@ class FileController:
         except PermissionError:
            uiController.SetStopMessage("Permission denied.")
     
+    ### Save Camera Result csv file
     def SaveCameraResultsFile(self, frameThatMouseStayedInTheChamber, whichAreaMouseStayedDuringStimulation , leftChamberStayedDuration, middleChamberStayedDuration, rightChamberStayedDuration, stimulationDuration):
         pd.DataFrame({'Mouse Stay Area Timeline':pd.Series(frameThatMouseStayedInTheChamber), 
                       'Mouse Stay Area':pd.Series(whichAreaMouseStayedDuringStimulation), 
@@ -95,6 +101,7 @@ class FileController:
                       'Duration in Right Area(s)':pd.Series(rightChamberStayedDuration)}
                       ).to_csv(self._cwd+"/"+datetime.now().strftime("%Y%m%d_%H%M%S")+"_Camera Result.csv")
     
+    ### Save Stimulation Result csv file
     def SaveStimulationResultsFile(self, timeline, signal, magneticTimeline, magneticValue, temperatureTimeline, temperatureValue, vibrationXTimeline, vibrationXValue,vibrationYTimeline, vibrationYValue, vibrationZTimeline, vibrationZValue, soundTimeline, soundValue):
         pd.DataFrame({'Timeline':pd.Series(timeline), 
                       'Stimulaition': pd.Series(signal), 
@@ -112,7 +119,7 @@ class FileController:
                       'Sound':pd.Series(soundValue) 
                      }).to_csv(self._cwd+"/"+datetime.now().strftime("%Y%m%d_%H%M%S")+"_Stimulation Result.csv")
 
-
+    ### Load Video file
     def LoadVideoFile(self, uiController):
         file, filetype = QtWidgets.QFileDialog.getOpenFileName(uiController, "Open Movie", QDir.homePath())
         if file != "" :   
@@ -121,6 +128,7 @@ class FileController:
         else:
             uiController.SetStopMessage("You didn't choose any file.")
 
+    ### Select Folder
     def SelectFolder(self):
         folderPath = QtWidgets.QFileDialog.getExistingDirectory()
         if folderPath:
