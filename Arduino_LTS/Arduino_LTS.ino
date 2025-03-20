@@ -1,21 +1,17 @@
-/* 版本：v3.1，建立時間2023/09/18
+/* Version: v3.1, Created on 2023/09/18
  * Version time stamp:
  * Version 1.0 , build time 2021/08/29
- * Version 2.0 , build time 2021/09/06:enhance serial output text, increase count down function
- * - Version 2.1 , alter time 2021/09/23:bug fix and enhance functional 
- * - Version 2.2, re-assign signal pins and add “const" for change freq. and stimulate times
+ * Version 2.0 , build time 2021/09/06: enhance serial output text, increase countdown function
+ * - Version 2.1 , altered time 2021/09/23: bug fix and enhance functionality
+ * - Version 2.2, re-assign signal pins and add “const" for changing frequency and stimulation times
  *  
  * Version 3.0, Add Serial read with User Interface
- * -Version 3.1 Add User Interface writing stimulation pattern to Arduino
- * BUAD rate = 500000，記得選，分行符號可以選擇NL&CL
- * BUAD rate = 500000, rember to change buad rate, seperate symbol choosse NL&CL
- * 腳位2,5,6,9,11,12為IN1
- * pin2,5,6,9,11,12 for IN1
- * 腳位3,4,7,8,10,13 為IN2
- * pin3,4,7,8,10,13 for IN2
- * 在序列埠監視視窗中輸入“a” 會開始刺激
- * in serial monitor enter "a" to start stimulate
-*/
+ * - Version 3.1 Add User Interface writing stimulation pattern to Arduino
+ * BAUD rate = 500000, remember to select, line separator symbol can be set to NL&CL
+ * BAUD rate = 500000, remember to change baud rate, separator symbol choose NL&CL
+
+ */
+
 #include <Wire.h>
 
 int freqT = 0;
@@ -46,10 +42,10 @@ String functionGenerator = "";
 
 int devicePin1 = A1; // Device out pin
 int devicePin2 = A2; // Device out pin
-int magneticPin = A3; // 讀取磁場感測器的pin
-int tempPin = A6; //讀取溫度感測器的pin
-int SoundSensorPin = A7;
-float tempValue, magneticValue, soundValue; //溫度感測值
+int magneticPin = A3; // Pin for reading magnetic field sensor
+int tempPin = A6; // Pin for reading temperature sensor
+int SoundSensorPin = A7; // Pin for reading sound sensor
+float tempValue, magneticValue, soundValue; // Temperature sensor value
 float decibelLevel;
 
 int magneticThreshold = 4000;
@@ -423,7 +419,7 @@ void SignalAllLow(){ // Both IN1 & IN2 LOW
 }
 
 void Stimulation(){
-  while(stimulationIndex <= Stime){           // 開始刺激，刺激5次，每次開啟30秒，休息1分鐘，刺激頻率10Hz
+  while(stimulationIndex <= Stime) {           // Start stimulation, stimulate 5 times, each time for 30 seconds, rest for 1 minute, stimulation frequency 10Hz
     unsigned long int detectionTiming = 0;
     unsigned long int stimulationTiming = 0;
     unsigned long int tCheck = 0;
