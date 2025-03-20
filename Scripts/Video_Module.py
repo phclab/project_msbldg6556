@@ -14,21 +14,23 @@ class VideoController:
     _streamVideoFileName = ""
     _miceCurrentPosition = ""
 
-    _isCameraChangeSignal = False
+    _isCameraChangeSignal = True
     _miceDetectColor = 0
     _leftContourThreshold = 20000
     _rightContourThreshold = 20000
-    _colorThreshold = 127
+    _grayScaleThreshold = 127
     _isDetectingContourRange = False
     _leftAreaStayFrame = 0
     _middleAreaStayFrame = 0
     _rightAreaStayFrame = 0
     time = 0
 
+    ### Points to form detection area
     _pointsOfArea = []
     _leftArea = []
     _rightArea = []
 
+    ### Lists to store the frame and the position of the mice
     whichAreaMouseStayedDuringStimulation = []
     frameThatMouseStayedInTheChamber = []
 
@@ -48,66 +50,95 @@ class VideoController:
     isVideoPlaying = True
     isResultVideoRecording = True
 
+    ### Set the systemController
     def SetSystemController(self, controller):
         self._systemController = controller
-    
+
+    ### Set the area trigger type
     def SetCurrentAreaTriggerType(self, value: str):
         self.currentAreaTriggerType = value
 
+    ### Set the area trigger type
     def GetCurrentAreaTriggerType(self):
         return self.currentAreaTriggerType
 
+    ### Set the video detection state
     def SetCurrentContextString(self, value: str):
         self._currentContextString = value
 
+    ### Get the video detection state
     def GetCurrentContextString(self):
         return self._currentContextString
 
+    ### Get the mice behavior test type
     def GetCurrentBehaviorString(self):
         return self._currentBehaviorString
     
+    ### Set the gray scale used to binary
+    def SetGrayScaleThreshold(self, value: int):
+        self._grayScaleThreshold = value
+    
+    ### Get the gray scale used to binary
+    def GetGrayScaleThreshold(self):
+        return self._grayScaleThreshold
+
+    ### Set the pixel number used to detect mice in the left area
     def SetLeftContourThreshold(self, value: int):
         self._leftContourThreshold = value
     
+    ### Get the pixel number used to detect mice in the left area
     def GetLeftContourThreshold(self):
         return self._leftContourThreshold
 
+    ### Set the pixel number used to detect mice in the right area
     def SetRightContourThreshold(self, value: int):
         self._rightContourThreshold = value
 
+    ### Get the pixel number used to detect mice in the left area
     def GetRightContourThreshold(self):
         return self._rightContourThreshold
 
+    ### Get the duration mice stayed in the left chamber
     def GetLeftAreaStayDuration(self):
         return self._leftAreaStayFrame
     
+    ### Get the duration mice stayed in the middle chamber
     def GetMiddleAreaStayDuration(self):
         return self._middleAreaStayFrame
 
+    ### Get the duration mice stayed in the right chamber
     def GetRightAreaStayDuration(self):
         return self._rightAreaStayFrame
 
+    ### Get the chamber the mice stayed
     def GetWhichAreaMouseStayedDuringStimulation(self):
         return self.whichAreaMouseStayedDuringStimulation
     
+    ### Get the timing mice stayed in the each chamber
     def GetFrameThatMouseStayedInTheChamber(self):
         return self.frameThatMouseStayedInTheChamber
 
+    ### Set detect state
     def SetContext(self, state: str):
         self._currentContextString = state
 
+    ### Set background color and mice color to be detected
     def SetContourDetectColor(self, value):
         self._miceDetectColor = value
     
+    ### Get background color and mice color to be detected
     def GetContourDetectColor(self):
         return self._miceDetectColor 
 
+    ### Set if the signal be changed with camera result
     def ReverseTheVauleOfIsCameraChangeSignal(self, value: bool):
         self._isCameraChangeSignal = value
     
+    ### Get if the signal be changed with camera result
     def GetTheVauleOfIsCameraChangeSignal(self):
         return self._isCameraChangeSignal
     
+    ### Get the duration of the video
     def GetVideoDuration(self, cap):
         frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         fps = cap.get(cv2.CAP_PROP_FPS)
@@ -116,21 +147,20 @@ class VideoController:
             self._systemController.uiController.totalDuration = videoDuration
             return frame_count, videoDuration
 
-    def Request(self):
-        self.state.Handle()
-
+    ### Change contour detect type
     def ChangeContourDetect(self, value):
         self.currentAreaTriggerType = value
         if self._currentContextString == "Pause":
             self._currentContextString = "BeforePlay"
 
+    ### Change mice behavior test
     def ChangeBehaviorTest(self, value):
         self._currentBehaviorString = value
         if self._currentContextString == "Pause":
             self._currentContextString = "BeforePlay"
     
 
-    ### 確認是否具有影像
+    ### Check if there is already video be loaded
     def CheckIfVideoIsAbled(self):
         cap = self.LoadVideo()
         if cap.isOpened() == False:
@@ -145,7 +175,7 @@ class VideoController:
                     self._currentContextString = "Calculation"
         
 
-    ### 讀取影像
+    ### Load the video
     def LoadVideo(self):
         if self.loadingVideoFileName != "" :
             cap = cv2.VideoCapture(self.loadingVideoFileName)
@@ -156,19 +186,14 @@ class VideoController:
 
         return cap
 
-    ### 重設偵測區域
+    ### Reset the detection area
     def ResetDetectArea(self):
         self._pointsOfArea.clear()
         self._leftArea.clear()
         self._rightArea.clear()
         self._currentContextString = "ScreenShot"
 
-    ### 清除刺激結果資料
-    def ClearTheStimulationResultData(self):
-        self.whichAreaMouseStayedDuringStimulation.clear()
-        self.frameThatMouseStayedInTheChamber.clear()
-
-    ### 計算小鼠在每個區域的時間
+    ### Calculate the duration that mice stayed in each area
     def CalculateTheDurationThatMiceStayedInEachArea(self, totalDuration):
         totalMiceStayedFrame = self._leftAreaStayFrame + self._middleAreaStayFrame + self._rightAreaStayFrame
         if totalMiceStayedFrame != 0:
@@ -182,7 +207,7 @@ class VideoController:
 
         return leftChamberStayedDuration, middleChamberStayedDuration, rightChamberStayedDuration
     
-    ### 停止前個影像錄影，並開始新的影像錄影
+    ### Stop previous video saving and start saving another video
     def StopPreviousSavingAndStartSavingAnotherVideo(self, cwd, isSavingAnotherVideo, fileName = ""):
         if self._result != None:
             self._result.release()
@@ -198,7 +223,7 @@ class VideoController:
             self._resultName = ""
 
 
-    ### 調整左側區域建議數值範圍
+    ### Detect contour range in the left detection area
     def DetectLeftContourPixelRange(self):
         if self.suggestedMaximumContourPixel == 0:
             self.suggestedMaximumContourPixel = self.leftPixels
@@ -211,7 +236,7 @@ class VideoController:
         return "Left Contour Threshold: Suggested Range in" + str(self.suggestedMinimumContourPixel) + "-" + str(self.suggestedMaximumContourPixel)
     
 
-    ### 調整右側區域建議數值範圍
+    ### Detect contour range in the right detection area
     def DetectRighttContourPixelRange(self):
         if self.rightSuggestedMaximumContourPixel == 0:
             self.rightSuggestedMaximumContourPixel = self.rightPixels
@@ -223,7 +248,7 @@ class VideoController:
                 self.rightSuggestedMaximumContourPixel = self.rightPixels
         return "Right Contour Threshold: Suggested Range in" + str(self.rightSuggestedMinimumContourPixel) + "-" + str(self.rightSuggestedMaximumContourPixel)
 
-    ### 截圖
+    ### Screenshot the current frame
     def ScreenShot(self, event, x, y, flags, param):
         if event == cv2.EVENT_LBUTTONDOWN:
             cv2.imwrite("Screenshot.png", self.frame)
@@ -240,7 +265,7 @@ class VideoController:
         elif event == cv2.EVENT_RBUTTONDOWN:
             self.isVideoPlaying = False
 
-    ### 框選偵測區域
+    ### Select the points to form detection area
     def SelectRegionOfInterest(self, event, x, y, flags,params):
         if event == cv2.EVENT_LBUTTONDOWN:
             if len(self._pointsOfArea) >= 4:
@@ -312,7 +337,7 @@ class VideoController:
         cv2.imshow("Crop", self.img)
     
 
-    ### 標示當前偵測區域
+    ### Draw the detection area
     def DrawAreaWithCurrentPoints(self, image, area):
         if len(area) > 0:
             # Draw The Points of The area
@@ -327,7 +352,7 @@ class VideoController:
             cv2.circle(image,area[-1], 5, (0, 0, 255), -1)
             cv2.line(image, pt1=area[0], pt2=area[-1], color=(255, 0, 0), thickness=2)
 
-    
+    ### Draw the two detection area
     def SetWholeArea(self, image, leftArea, rightArea):
         for i in range(len(leftArea)-1):
             cv2.circle(image, leftArea[i], 5, (0, 0, 255), -1)  # x ,y 爲鼠標點擊地方的座標
@@ -342,32 +367,32 @@ class VideoController:
             cv2.line(image, pt1=rightArea[0], pt2=rightArea[-1], color=(0, 0, 255), thickness=2) 
 
 
-    ### 計算並取得該區域的Pixels數值
+    ### Calculate and get the contour pixels in the area
     def CalculateAndGetTheContourPixelsInTheArea(self, regionOfInterest):
         areaMask = np.zeros(self.frame.shape, np.uint8)
         points = np.array(regionOfInterest, np.int32)
         points = points.reshape((-1, 1, 2))
-        # 畫多邊形
+        # Draw polygon
         frame = self.frame.copy()
         areaMask = cv2.polylines(frame, [points], isClosed= True, color=(255, 255, 255), thickness=1)
         areaMask2 = cv2.fillPoly(areaMask.copy(), [points], (255, 255, 255))  # 用於求 ROI
         areaROI = cv2.bitwise_xor(frame, areaMask2)
         gray = cv2.cvtColor(areaROI, cv2.COLOR_BGR2GRAY)
         gray = cv2.medianBlur(gray, 5)
-        ret, gray = cv2.threshold(gray, self._colorThreshold, 255, cv2.THRESH_BINARY)
+        ret, gray = cv2.threshold(gray, self._grayScaleThreshold, 255, cv2.THRESH_BINARY)
         pixels = np.sum(gray == self._miceDetectColor)
         background = np.sum(gray == abs(255 - self._miceDetectColor))
 
         return gray, areaROI, pixels, background
 
-    ### 重設偵測區域
+    ### Reset detection area
     def ResetDetectArea(self):
         self._pointsOfArea.clear()
         self._leftArea.clear()
         self._rightArea.clear()
         self._currentContextString = "ScreenShot"
 
-    ### 計算老鼠停留時間
+    ### Measure the mice stay duration
     def MeasureMouseStayDuration(self, time):
         if self._miceCurrentPosition == "Left":
             self._leftAreaStayFrame += 1
@@ -389,14 +414,15 @@ class VideoController:
             self._middleAreaStayFrame += 1
             self.frameThatMouseStayedInTheChamber.append(time)
             self.whichAreaMouseStayedDuringStimulation.append(0)
-    ### 計算老鼠停留時間比率
+
+    ### Get mice stay duration ratio in each chamber
     def GetMouseStayDurationRatio(self):
         if self._currentBehaviorString == "Light Dark Box":
             return "Duration(L/D, frame):" + str(self._leftAreaStayFrame) + "/" + str(self._rightAreaStayFrame)
         else:
             return "Duration(L/M/R, frame):" + str(self._leftAreaStayFrame)+ "/" + str(self._middleAreaStayFrame) + "/" + str(self._rightAreaStayFrame)
 
-    ### 相機功能循環   
+    ### The camera detect function in each state   
     def RepeatVideoCycle(self, cwd):
         while self._systemController.isCameraReadingStarted == True:
             try:
@@ -507,7 +533,7 @@ class VideoController:
                 print("An error occurred:", type(error).__name__, type(error).__name__, "–", error)
 
 
-    ### 取得小鼠位置
+    ### Get the position of the mice
     def GetMicePosition(self):
         if self._currentBehaviorString == "Place Preference Test":
             ## Purpose : Check if mice is in the left part of the center chamber.
@@ -555,7 +581,7 @@ class VideoController:
             else:
                 self._miceCurrentPosition = "Outside ROI"
 
-    ### 選擇刺激模式
+    ### Change the stimulation state with mice position
     def GetStimulationStateWithMicePosition(self):
         if self.currentAreaTriggerType == "Stop stimulation while mice in the ROI.":
             if self._miceCurrentPosition == "Inside ROI":
@@ -593,7 +619,7 @@ class VideoController:
             else:
                 return False
 
-    ### 展示圖像
+    ### Show the image on the camera page
     def ShowImageOnCameraTab(self):
         self.frame = cv2.resize(self.frame, (960, 640))
         revertColorFrame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2RGB)
@@ -614,11 +640,12 @@ class VideoController:
             height, width, channel = self.contourImgRight.shape
             bytesPerline = channel * width
     
+    ### Clear the camera results
     def ClearCameraData(self):
         self.whichAreaMouseStayedDuringStimulation = []
         self.frameThatMouseStayedInTheChamber = []
 
-    ### 改變影像每秒幀數
+    ### Change the output video FPS
     def ChangeVideoFPS(self, video):
         if self._systemController.uiController.totalDuration != 0:
             cap = cv2.VideoCapture(video) 
@@ -646,6 +673,7 @@ class VideoController:
             out.release() 
             cv2.destroyAllWindows()
     
+    ### Change the detect state as pre-calculation
     def SetVideoPreCalculationStatus(self, fileName):
         self.isVideoPlaying = True
         self._currentContextString = "ScreenShot"
