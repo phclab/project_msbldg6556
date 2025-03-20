@@ -1,5 +1,6 @@
 import serial
 import serial.tools.list_ports
+from time import time
 
 class ArduinoController:
     ser = None
@@ -8,18 +9,22 @@ class ArduinoController:
     isSignalStopping = False
     detectionState = ""
     
+    ### Dictionary to store the sensor value
     SensorResultDurationData =  {"Signal": [], "Temperature": [], "MagneticField": [], "VibrationX":[], "VibrationY":[], "VibrationZ":[], "Sound": []}
     SensorResultValueData = {"Signal": [], "Temperature": [], "MagneticField": [], "VibrationX":[], "VibrationY":[], "VibrationZ":[], "Sound": []}
 
+    ### Check if any Arduino is connected
     def CheckIfArduinoIsConnected(self):
         if self.ser == None:
             return "Arduino is not found."
         else:
             return "Arduino is connected."
-        
+    
+    ### Output text to Arduino
     def OutputTextToArduino(self, text):
         self.ser.write(bytes(str(text) + "\n", 'utf-8'))
     
+    ### Auto search Arduino that can be connected
     def AutoSearchArduino(self):
         IsArduinoGet = False
         comNumber = None
@@ -29,30 +34,33 @@ class ArduinoController:
             self.comPort = ""
             self.ser = None
             return "Arduino is not found."
-        else:
+        elif len(ports) > 1:
             self.comPort = ""
             for i in range(0, len(ports)):
-                self.comPort = ports[i]
-                self.ser = serial.Serial(self.comPort , self.baudRates, timeout=0.5)
-                checkPoint = ""
-                checkTime = 0
-                while checkPoint != "SystemCheck" and IsArduinoGet == False:
-                    if checkTime != 10:
-                        self.OutputTextToArduino("MagneticSystem")
-                        data_raw = self.ser.readline()
-                        data = data_raw.decode()
-                        data = data.replace("\n", "")
-                        data = data.replace("\r", "")
-                        checkPoint = data
-                        if checkPoint == "SystemCheck":
-                            IsArduinoGet = True
+                try:
+                    self.comPort = ports[i]
+                    self.ser = serial.Serial(self.comPort , self.baudRates, timeout=0.5)
+                    checkPoint = ""
+                    checkTime = 0
+                    while checkPoint != "SystemCheck" and IsArduinoGet == False:
+                        if checkTime != 10:
+                            self.OutputTextToArduino("MagneticSystem")
+                            data_raw = self.ser.readline()
+                            data = data_raw.decode()
+                            data = data.replace("\n", "")
+                            data = data.replace("\r", "")
+                            checkPoint = data
+                            if checkPoint == "SystemCheck":
+                                IsArduinoGet = True
+                            else:
+                                checkTime += 1
                         else:
-                            checkTime += 1
-                    else:
-                        break
-                if comNumber == None and checkPoint == "SystemCheck":
-                    comNumber = i
-                    selectComport = ports[comNumber]
+                            break
+                    if comNumber == None and checkPoint == "SystemCheck":
+                        comNumber = i
+                        selectComport = ports[comNumber]
+                except:
+                    pass
             if comNumber != None:
                 try:
                     self.ser = None
@@ -63,22 +71,19 @@ class ArduinoController:
                     return "The "+ str(self.comPort) +" cannot be connected. Please check the Arduino."
             else:
                 return "Arduino is not found."
+        else: 
+            self.comPort = ports[0]
+            self.ser = serial.Serial(self.comPort , self.baudRates, timeout=0.5)
+            return "Arduino " + self.comPort + " is found."
     
+    ### Get available ports
     def GetCurrentPortsAvailable(self):
-        ports = serial.tools.list_ports.comports()
-        available_ports = []
-        
-        for port in ports:
-            try:
-                s = serial.Serial(port.device)
-                s.close()
-                available_ports.append(port.device)
-            except serial.SerialException:
-                pass
+        ports = []
+        for port in serial.tools.list_ports.comports():
+            ports.append(port.name)
+        return ports
 
-        return available_ports
-
-        ##Search Arduino with port number
+    ### Search Arduino with port number
     def SetComPortAndSearchArduino(self, text):     
         try:
             comPort = str(text)
@@ -92,37 +97,50 @@ class ArduinoController:
             else:
                 return "Arduino is not found."
     
+    ### Set baud rate
     def SetBaudRate(self, baudRate):
         self.baudRates = baudRate
     
+    ### Get the comport of the connected Arduino
     def GetComPort(self):
         return self.comPort
     
+    ### Store signal data
     def AppendSignalData(self, time, value):
         self.SensorResultValueData["Signal"].append(value)
         self.SensorResultDurationData["Signal"].append(time)
 
-    def ReadDataFromArduino(self, time):
+    ### Get data from Arduino
+    def ReadDataFromArduino(self, startTime):
         while self.ser.in_waiting:
+            currentTime = time() - startTime
             data_raw = self.ser.readline()
             data = data_raw.decode()
             data = data.replace("\n", "")
             data = data.replace("\r", "")
             #print(data)
-            if self.detectionState == "":    
+            try:               
+                key, value = data.split(":")
+                if key in self.SensorResultValueData:
+                    self.SensorResultValueData[key].append(float(value)) 
+                    self.SensorResultDurationData[key].append(currentTime)
+            except ValueError:
+                pass
+            
+            '''if self.detectionState == "":    
                 self.detectionState = data
-                self.isSignalWriting = False
             else:
                 if self.detectionState in self.SensorResultValueData:
                     try: 
                         self.SensorResultValueData[self.detectionState].append(float(data))
-                        self.SensorResultDurationData[self.detectionState].append(time)
+                        self.SensorResultDurationData[self.detectionState].append(currentTime)
                         self.detectionState = ""
                     except:
                         self.detectionState = ""
                 else: 
-                    self.detectionState = data
+                    self.detectionState = data'''
 
+    ### Clear all the data stored from Arduino
     def ClearAllRealtimeData(self):
         self.SensorResultValueData.clear()
         self.SensorResultDurationData.clear()
