@@ -31,17 +31,20 @@ class SystemController:
         self._SignalReadingThread = threading.Thread(target= self.ReadSensorValueRealtime)
         self._eventSignal = threading.Event()
 
+    ### Start the sensor detection
     def StartSignalReadingThread(self):
         self._eventSignal.set()
         if self._SignalReadingThread.is_alive() == False:
             self._SignalReadingThread.start()
 
+    ### Start the stimulation
     def StartSystemTimeCounting(self):
         self._eventSignal.set()
         self.startTime = time()
         self.arduinoController.OutputTextToArduino("Start")
         self.videoController.isResultVideoRecording = False
 
+    ### Start the camera detection
     def SetCameraReadingStarted(self):
         self.isCameraReadingStarted = True
         self._eventCamera.set()
@@ -53,25 +56,28 @@ class SystemController:
     def SetUIController(self, uiConroller):
         self.uiController = uiConroller
 
+    ### Get UI Controller
     def GetUIController(self):
         return self.uiController
-
-    def SetArduinoController(self):
-        self.arduinoController = Arduino_Controller.ArduinoController()
     
+    ### Get Arduino Controller
     def GetArduinoController(self):
         return self.arduinoController
 
+    ### Add new column in the protocol
     def AddNewColumn(self):
         self.stimulationProtocol.AddNewColumnData()
         self.uiController.AddRightColumnInProtocolTable(index = -1)
 
+    ### Get sensor timing list
     def GetTimelineData(self, sensorType):
         return self.arduinoController.SensorResultDurationData[sensorType]
 
+    ### Get sensor value list
     def GetValueData(self, sensorType):
         return self.arduinoController.SensorResultValueData[sensorType]
 
+    ### Get the protocol file and set the protocol GUI value with the file
     def LoadFileAndSetProtocolParameter(self):
         file = self.fileController.LoadStimulationProtocolFile(self.uiController)
         self.uiController.ClearAllProtocolTable()
@@ -85,11 +91,10 @@ class SystemController:
         self.uiController.RenewPlot(self.uiController._plot)
         self.uiController.ChangeAllTheContentInTheProtocol()
 
-
+    ### Output stimualtion setting to Arduino
     def OutputStimulationSettingToArduino(self):
         if self._CameraThread.is_alive():
             self._eventCamera.wait()
-        #self.isSensorReadingStarted = False
         self._eventSignal.clear()
         self.uiController.ChangeAllTheContentInTheProtocol()
         self.uiController.DisableStimulationPage()
@@ -124,6 +129,8 @@ class SystemController:
         self._eventSignal.set()
         if self._SignalReadingThread._started.is_set() == False:
             self._SignalReadingThread.start()
+
+    ### Output text to Arduino and check if Arduino gets the text
     def OutputTextAndCheckIsSend(self, textToOutput, suffix):
         for i in textToOutput.keys():
             checkPoint = ""
@@ -143,7 +150,7 @@ class SystemController:
                 data = data.replace("\r", "")
                 checkPoint = data
 
-
+    ### Load lastest stimulation protocol and put in GUI
     def SetLastestParametersWithCsvFile(self, isPreviousFileExist,  csvFile):
         if isPreviousFileExist == False:
             self.uiController.SetStopMessage("There is no last time setting protocol.")
@@ -171,6 +178,7 @@ class SystemController:
             self.videoController._rightContourThreshold = csvFile['Right Camera Threshold'].tolist()[0]
             self.videoController._currentBehaviorString = csvFile['Behavior Type'].tolist()[0]
 
+    ### Save lastest stimulation protocol to csv file
     def SaveLastestParametersToCsvFile(self):
         self.fileController.SaveLastestParameters(
             isSensorChangeSignal = self.sensorDetectionProtocol.GetTheVauleOfIsSensorChangeSignal(),
@@ -195,6 +203,7 @@ class SystemController:
             frequencyData = self.stimulationProtocol.GetFrequencyData()[0], 
             deadTimeData = self.stimulationProtocol.GetDeadTimeData()[0])
     
+    ### Save stimulation protocol to csv file
     def SaveStimulationProtocolToCsvFile(self, uiController):
         self.uiController.ChangeAllTheContentInTheProtocol()
         self.fileController.SaveStimulationProtocolFile(
@@ -211,6 +220,7 @@ class SystemController:
             deadTimeData= self.stimulationProtocol.GetDeadTimeData()[0]
             )
 
+    ### Save camera results to csv file
     def SaveCameraResultsToCsvFile(self):
         self.fileController.SaveCameraResultsFile(
             frameThatMouseStayedInTheChamber = self.videoController.GetFrameThatMouseStayedInTheChamber(), 
@@ -220,6 +230,7 @@ class SystemController:
             middleChamberStayedDuration = self.videoController.CalculateTheDurationThatMiceStayedInEachArea(totalDuration= self.stimulationProtocol.GetTotalDuration())[1], 
             rightChamberStayedDuration = self.videoController.CalculateTheDurationThatMiceStayedInEachArea(totalDuration= self.stimulationProtocol.GetTotalDuration())[2])
 
+    ### Save stimulation results to csv file
     def SaveStimulationResultsToCsvFile(self):
         self.fileController.SaveStimulationResultsFile(
             timeline = self.arduinoController.SensorResultDurationData["Signal"], 
@@ -237,7 +248,7 @@ class SystemController:
             soundTimeline = self.arduinoController.SensorResultDurationData["Sound"], 
             soundValue = self.arduinoController.SensorResultValueData["Sound"])
 
-
+    ### Start Arduino Stimulation
     def StartStimulation(self):
         if self.arduinoController.ser == None:
             self.uiController.SetStopMessage("Arduino is not found.")
@@ -245,17 +256,20 @@ class SystemController:
             self.arduinoController.ClearAllRealtimeData()
             self.arduinoController.OutputTextToArduino("Start")
 
+    ### Start sensor detection 
     def ReadSensorValueRealtime(self):
         while self.isSensorReadingStarted == True:
             self._eventSignal.wait()
             if self.sensorReadingState == "SensorReading":
                 if self.arduinoController.ser != None:
-                    self.arduinoController.ReadDataFromArduino(time()-self.startTime)
+                    self.arduinoController.ReadDataFromArduino(self.startTime)
 
+    ### Start camera detection
     def ReadCameraRealtime(self):
         while self.isCameraReadingStarted == True:
             self.videoController.RepeatVideoCycle(cwd= self.fileController._cwd)
     
+    ### Stimulation signal changed with camera 
     def SignalChangeWithCamera(self):
         if self.videoController._isCameraChangeSignal == True:
             if self.videoController.GetStimulationStateWithMicePosition() == True:
@@ -266,5 +280,5 @@ class SystemController:
                 self.sensorReadingState = "SensorWriting"
                 self.arduinoController.OutputTextToArduino("StopSignal")
                 self.isSignalStopping = True
-                
+
             self.sensorReadingState = "SensorReading"
