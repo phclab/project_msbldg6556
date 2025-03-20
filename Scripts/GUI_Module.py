@@ -10,30 +10,40 @@ import numpy as np
 
 class UIController(QWidget):
     app = QApplication([])
+
+    ### Lists for protocol setting
     _rowHeader = []
     _columnHeader = ["Action","Duration(sec)","Frequency(Hz)", "Dead Time(millisecond)"]
     _functionCategory = ["Rest", "Stimulation"]
     _actionCategory = ["On-Off", "Bidirection", "Always On"]
+
+    ### Options for camera and signal setting
     _behaviorType = ["Light Dark Box", "Place Preference Test"]
     _colorType = ["White Background, Black Mice", "Black Background, White Mice"]
     _lightDarkBoxTriggerType = ["Stop stimulation while mice in the ROI.", "Start stimulation while mice in the ROI."]
     _placePreferenceTriggerType = ["Stop stimulation while mice in the left chamber.", "Start stimulation while mice in the left chamber.", "Stop stimulation while mice in the right chamber.", "Start stimulation while mice in the right chamber."]
     _sensorChangeSignalType = ["Don't Stop signal while over threshold","Stop signal while over threshold"]
     
+    ### Sensor Plot Dictionaries
     _sensorCheckbox = {}
     _sensorRealtimePlot = {}
     _currentOpenSensorCheckbox = {}
     _currentOpenSensorRealtimePlot = {}
+
+    ### Dictionnary to store GUI pages
     _pageData = {}
 
+    ### Lists to store the buttons in the protocol
     _actionButton = []
     _functionButton = []
     _timeButton = []
     _frequencyButton = []
     _deadTimeButton = []
+
     _geometry = app.desktop().availableGeometry()
     systemController = None
 
+    ### Font and font size
     _tab = QTabWidget()
     _contentFont = QFont()
     _contentFont.setPointSize(12)
@@ -44,15 +54,18 @@ class UIController(QWidget):
     _titleFont = QFont()
     _titleFont.setPointSize(28)
 
+    ### Timer
     _timer = QTimer()
     _realtimePlotTimer = QTimer()
 
+    ### index to calculate the current step and voltage
     _increment = 0
     _currentStep = 0
     totalDuration = 0
     _currentDuration = 0
     lastIndex = 0
 
+    ### Initiate the GUI
     def __init__(self, parent = None):
         super(UIController, self).__init__(parent)
         self.systemController = Main_System_Module.SystemController()
@@ -65,11 +78,11 @@ class UIController(QWidget):
         self.CompareDataToCurrentColumnLength(len(self.systemController.stimulationProtocol.GetStepData()))
         self.RenewPlot(self._plot)
 
-    ### 組合各種UI內容
+    ### Assemble the GUI pages
     def AssembleUI(self):
         self.setGeometry(self._geometry)
         self.setWindowTitle("Ecosystem")
-        self.SetStimulationPage()
+        self.SetProtocolPage()
         self.SetSensorPage()
         self.SetCameraPage()
         self.SetStimulationRealtimePage()
@@ -83,30 +96,30 @@ class UIController(QWidget):
         self.mainLayout.addWidget(self._tab)
         self.SetStopMessage(self.systemController.arduinoController.AutoSearchArduino())
 
-    ### 關閉刺激頁面
+    ### Making the stimulation page unable to be use
     def DisableStimulationPage(self):
         self._toolBar.setDisabled(True)
         for i in range(0, len(self._actionButton)):
             self._actionButton[i].setDisabled(True)
         self._protocolTable.setDisabled(True)
 
-    ### 開啟刺激頁面
+    ### Making the stimulation page able to be use
     def AbleStimulationPage(self):
         self._toolBar.setDisabled(False)
         for i in range(0, len(self._actionButton)):
             self._actionButton[i].setDisabled(False)
         self._protocolTable.setDisabled(False)
 
-    ### 錯誤訊息
+    ### Show message to the user
     def SetStopMessage(self, message):
         self.stopMessage = QMessageBox.about(self,"Hint Message", message)
     
-    ### 改變刺激型態
+    ### Change the pattern of the stimulation
     def ChangeActionValue(self, value):
         self.systemController.stimulationProtocol.SetAction(value)
 
-    ### 設定刺激頁面
-    def SetStimulationPage(self):
+    ### Set the GUI in the protocol page and store in the page list 
+    def SetProtocolPage(self):
         ####Setting Action Button
         _settingPage = QWidget(self)
         self._plot = pyqtgraph.plot()
@@ -179,6 +192,7 @@ class UIController(QWidget):
         self.filePathButton = QPushButton("Choose Address")
         self.filePathButton.clicked.connect(self.systemController.fileController.SelectFolder)
         self.filePathButton.clicked.connect(lambda: self.filePathLabel.setText("【File Path】" + str(self.systemController.fileController._cwd)))
+
         ####Setting Period Sheets
         self._protocolTable = QTableWidget()
         self._protocolTable.setRowCount(len(self._columnHeader))
@@ -214,12 +228,12 @@ class UIController(QWidget):
         _settingPage.setLayout(self.settingLayout)
 
     
-    ### 設定感測器頁面
+    ### Set the GUI in the sensor page and store in the page list 
     def SetSensorPage(self):
         _sensorPage = QWidget(self)
         self._pageData["Sensor"] = _sensorPage
 
-         ####Setting Detection Checkbox
+        ####Setting Detection Checkbox
         self.sensorChangeSignalDropDown = QComboBox(self)
         self.sensorChangeSignalDropDown.addItems(self._sensorChangeSignalType)
 
@@ -274,7 +288,7 @@ class UIController(QWidget):
         _sensorPage.resize(self._geometry.width(), self._geometry.height())
 
 
-    ### 設定相機頁面
+    ### Set the GUI in the camera page and store in the page list 
     def SetCameraPage(self):
         _cameraPage = QWidget(self)
         self._pageData["Camera"] = _cameraPage
@@ -285,6 +299,7 @@ class UIController(QWidget):
         self._cameraToolBar.setStyleSheet("background-color : gray")
         self._cameraToolBar.setIconSize(QSize(100, 100))
 
+        ####Setting toolbox
         self.playVideoButton = QAction('Play Video')
         self._cameraToolBar.addAction(self.playVideoButton)
         self.playVideoButton.triggered.connect(lambda: self.systemController.videoController.CheckIfVideoIsAbled())
@@ -316,7 +331,7 @@ class UIController(QWidget):
         self.frameLabelGroup = QWidget()
         self.frameLabelGroup.setLayout(self.frameLabelLayout)
 
-        ####Purpose : Setting Stimulation Protocol Plot
+        ###Setting Stimulation Protocol Plot
         self.stimulationProtocolPlotInCameraPage = pyqtgraph.plot()
         self.stimulationProtocolPlotInCameraPage.setBackground("w")
         self.stimulationProtocolPlotInCameraPage.showGrid(x = True, y = True)
@@ -326,7 +341,7 @@ class UIController(QWidget):
         self.stimulationProtocolPlotInCameraPage.setMouseEnabled(x=False, y=True)
         self.stimulationProtocolPlotInCameraPage.enableAutoRange(y=False)
         
-        ####Purpose : Setting Realtime Singal Plot
+        ###Setting Realtime Singal Plot
         self.realSignalPlotInCameraPage = pyqtgraph.plot()
         self.realSignalPlotInCameraPage.setBackground("w")
         self.realSignalPlotInCameraPage.showGrid(x = True, y = True)
@@ -336,6 +351,7 @@ class UIController(QWidget):
         self.realSignalPlotInCameraPage.setMouseEnabled(x=False, y=True)
         self.realSignalPlotInCameraPage.enableAutoRange(y=False)
 
+        ###Setting Realtime Contour Plot
         self.contourPlot = pyqtgraph.plot()
         self.contourPlot.setBackground("w")
         self.contourPlot.showGrid(x = True, y = True)
@@ -344,7 +360,16 @@ class UIController(QWidget):
         self.contourPlot.setYRange(-2, 2, padding= 1, update=True)
         self.contourPlot.setMouseEnabled(x=False, y=True)
         self.contourPlot.enableAutoRange(y=False)
-        
+
+        ###Setting Gray Scale Threshold Inputfield
+        self.grayScaleThresholdTitle = QLabel(self)
+        self.grayScaleThresholdTitle.setText("Gray Scale Threshold:")
+        self.grayScaleThresholdTitle.setFont(self._contentFont)
+        self.grayScaleThresholdInputField = QLineEdit(self)
+        self.grayScaleThresholdInputField.setValidator(QIntValidator())
+        self.grayScaleThresholdInputField.setFont(self._contentFont)
+
+        ###Setting Pixel Number Threshold Inputfield
         self.contourPixelsLabel = QLabel(self)
         self.contourPixelsLabel.setText("Pixels Number: 0")
         self.contourPixelsLabel.setFont(self._contentFont)
@@ -354,6 +379,7 @@ class UIController(QWidget):
         self.leftSuggestedContourThresholdTitle = QLabel("Left Threshold of Pixels Number", self)
         self.leftSuggestedContourThresholdTitle.setFont(self._contentFont)
 
+        ###Setting Dropdowns to choose detect type and behavior type
         self.contourDetectTypeDropdown = QComboBox(self)
         self.contourDetectTypeDropdown.addItems(self._lightDarkBoxTriggerType)
         self.contourDetectTypeDropdown.setFont(self._contentFont)
@@ -362,6 +388,9 @@ class UIController(QWidget):
         self.behaviorTypeDropDown.addItems(self._behaviorType)
         self.behaviorTypeDropDown.setFont(self._contentFont)
         self.behaviorTypeDropDown.currentIndexChanged.connect(lambda: self.ChangeBehaviorType(dropdown=self.behaviorTypeDropDown))
+
+        self.grayScaleThresholdInputField.setText(str(self.systemController.videoController.GetGrayScaleThreshold()))
+        self.grayScaleThresholdInputField.textChanged.connect(lambda: self.systemController.videoController.SetGrayScaleThreshold(value = int(self.grayScaleThresholdInputField.text())))
 
         self.leftContourColorDropdown = QComboBox(self)
         self.leftContourColorDropdown.addItems(self._colorType)
@@ -392,6 +421,9 @@ class UIController(QWidget):
         self.mediaLayout.addWidget(self.leftContourColorDropdown,2,0)
         self.mediaLayout.addWidget(self.contourDetectTypeDropdown,3,0)
 
+        self.mediaLayout.addWidget(self.grayScaleThresholdTitle,2,1)
+        self.mediaLayout.addWidget(self.grayScaleThresholdInputField,3,1)
+
         self.mediaLayout.addWidget(self.leftSuggestedContourThresholdTitle,2,2)
         self.mediaLayout.addWidget(self.leftContourThresholdInputField,3,2)
         
@@ -412,13 +444,14 @@ class UIController(QWidget):
         _cameraPage.resize(self._geometry.width(), self._geometry.height())
 
 
-    ### 設定實時刺激畫面
+    ### Set the GUI in the stimulation page and store in the page list 
     def SetStimulationRealtimePage(self):
-        ##Realtime Stimulation Page
+        ###Realtime Stimulation Page
         _realtimePage = QWidget(self)
         self._pageData["Stimulation"] = _realtimePage
         self.realtimeMainLayout = QGridLayout(self)
 
+        ###Set the Button to control the stimulation
         self.buttonLayout = QHBoxLayout(self)
         self.buttonLayoutControl = QWidget()
         self.buttonLayoutControl.setLayout(self.buttonLayout)
@@ -437,7 +470,7 @@ class UIController(QWidget):
         self.buttonLayout.addWidget(self.startButton)
         self.buttonLayout.addWidget(self.stopButton)
 
-        ####Purpose : Setting Stimulation Protocol Plot
+        ###Setting Stimulation Protocol Plot
         self.stimulationProtocolPlot = pyqtgraph.plot()
         self.stimulationProtocolPlot.setBackground("w")
         self.stimulationProtocolPlot.showGrid(x = True, y = True)
@@ -452,7 +485,7 @@ class UIController(QWidget):
         self.StimulationProtocolPlotShowCheckBox.setChecked(True)
         self.StimulationProtocolPlotShowCheckBox.stateChanged.connect(lambda: self.stimulationProtocolPlot.setHidden(not self.StimulationProtocolPlotShowCheckBox.isChecked()))
         
-        ####Purpose : Setting Realtime Singal Plot
+        ###Setting Realtime Singal Plot
         self.realSignalPlot = pyqtgraph.plot()
         self.realSignalPlot.setBackground("w")
         self.realSignalPlot.showGrid(x = True, y = True)
@@ -470,7 +503,7 @@ class UIController(QWidget):
         self.realSignalPlotShowCheckBox.stateChanged.connect(lambda: self.realSignalPlot.setHidden(not self.realSignalPlotShowCheckBox.isChecked()))
         self._sensorCheckbox["Signal"] = self.realSignalPlotShowCheckBox
 
-        ####Purpose : Setting Magnetic Field Plot
+        ###Setting Magnetic Field Plot
         self.realtimeMagneticFieldPlot = pyqtgraph.plot()
         self.realtimeMagneticFieldPlot.setBackground("w")
         self.realtimeMagneticFieldPlot.showGrid(x = True, y = True)
@@ -486,7 +519,7 @@ class UIController(QWidget):
         self.realMagneticFieldPlotShowCheckBox.stateChanged.connect(lambda: self.realtimeMagneticFieldPlot.setHidden(not self.realMagneticFieldPlotShowCheckBox.isChecked()))
         self._sensorCheckbox["MagneticField"] = self.realMagneticFieldPlotShowCheckBox
 
-        ####Purpose : Setting Temperature Plot
+        ###Setting Temperature Plot
         self.realtimeTemperaturePlot = pyqtgraph.plot()
         self.realtimeTemperaturePlot.setBackground("w")
         self.realtimeTemperaturePlot.showGrid(x = True, y = True)
@@ -502,7 +535,7 @@ class UIController(QWidget):
         self.realTemperaturePlotShowCheckBox.stateChanged.connect(lambda: self.realtimeTemperaturePlot.setHidden(not self.realTemperaturePlotShowCheckBox.isChecked()))
         self._sensorCheckbox["Temperature"] = self.realTemperaturePlotShowCheckBox
 
-        ####Purpose : Setting Vibration Plot
+        ###Setting Vibration Plot
         self.realtimeVibrationPlot = pyqtgraph.plot()
         self.realtimeVibrationPlot.setBackground("w")
         self.realtimeVibrationPlot.showGrid(x = True, y = True)
@@ -518,7 +551,7 @@ class UIController(QWidget):
         self.realVibrationPlotShowCheckBox.stateChanged.connect(lambda: self.realtimeVibrationPlot.setHidden(not self.realVibrationPlotShowCheckBox.isChecked()))
         self._sensorCheckbox["Vibration"] = self.realVibrationPlotShowCheckBox
 
-        ####Purpose : Setting Sound Plot
+        ###Setting Sound Plot
         self.realtimeSoundPlot = pyqtgraph.plot()
         self.realtimeSoundPlot.setBackground("w")
         self.realtimeSoundPlot.showGrid(x = True, y = True)
@@ -534,7 +567,7 @@ class UIController(QWidget):
         self.realSoundPlotShowCheckBox.stateChanged.connect(lambda: self.realtimeSoundPlot.setHidden(not self.realSoundPlotShowCheckBox.isChecked()))
         self._sensorCheckbox["Sound"] = self.realVibrationPlotShowCheckBox
 
-        ####Setting ProgressBar
+        ###Setting ProgressBar
         self.progressbar = QProgressBar()
         
         self.realtimeMainLayout.addWidget(self.buttonLayoutControl,0,0,1,0)
@@ -553,7 +586,7 @@ class UIController(QWidget):
         self.realtimeMainLayout.addWidget(self.realtimeSoundPlot,9,1)
         _realtimePage.setLayout(self.realtimeMainLayout)
 
-    ##Add one column
+    ##Add one column in the protocol
     def AddRightColumnInProtocolTable(self, index):
         self._protocolTable.insertColumn(self._protocolTable.columnCount())
         self._rowHeader.append("Step" + str(self._protocolTable.columnCount()))
@@ -561,9 +594,10 @@ class UIController(QWidget):
         self._functionButton[-1].addItems(self._functionCategory)
         self._functionButton[-1].setCurrentText(self.systemController.stimulationProtocol._functionData[index])
         self._timeButton.append(QSpinBox())
-        self._timeButton[len(self._timeButton)-1].setMaximum(3600)
         self._timeButton[len(self._timeButton)-1].setValue(self.systemController.stimulationProtocol._durationData[index])
+        self._timeButton[len(self._timeButton)-1].setMaximum(3600)
         self._frequencyButton.append(QSpinBox())
+        self._frequencyButton[-1].setMaximum(500)
         self._frequencyButton[-1].setMinimum(1)
         self._frequencyButton[-1].setValue(self.systemController.stimulationProtocol._frequencyData[index])
         self._deadTimeButton.append(QSpinBox())
@@ -585,7 +619,7 @@ class UIController(QWidget):
         self._protocolTable.setHorizontalHeaderLabels(self._rowHeader)
     
 
-    ### 移除表格最右方資料
+    ### Remove the last column in the protocol
     def RemoveRightColumnInProtocolTable(self):
         self.systemController.stimulationProtocol.DeleteLastColumnData()
         if self._protocolTable.columnCount() == 1:
@@ -599,8 +633,7 @@ class UIController(QWidget):
             del self._deadTimeButton[-1]
             self._protocolTable.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
     
-
-    ##Compare current data and currant table size, then add/remove the column
+    ###Compare current data and currant table size, then add/remove the column
     def CompareDataToCurrentColumnLength(self, dataLength):
         if(dataLength > self._protocolTable.columnCount()):
             for i in range(dataLength - self._protocolTable.columnCount()):
@@ -610,7 +643,7 @@ class UIController(QWidget):
                 self.RemoveRightColumnInProtocolTable()
     
     
-    ### 將資料帶入表格中
+    ### Put the values from the lists to the protocol GUI
     def ChangeAllTheContentInTheTable(self):
         operationNumber = len(self.systemController.stimulationProtocol.GetStepData())
         functionData = self.systemController.stimulationProtocol.GetFunctionData()[0]
@@ -625,7 +658,7 @@ class UIController(QWidget):
         
         self.RenewPlot(self._plot)
 
-    ### 將表格內容存入資料
+    ### Put the values from the protocol GUI to the lists
     def ChangeAllTheContentInTheProtocol(self):
         for index in range(0, len(self._rowHeader)):
             self.systemController.stimulationProtocol._functionData[index] = self._functionButton[index].currentText()
@@ -633,7 +666,7 @@ class UIController(QWidget):
             self.systemController.stimulationProtocol._frequencyData[index] = self._frequencyButton[index].value()
             self.systemController.stimulationProtocol._deadTimeData[index] = self._deadTimeButton[index].value()
 
-    ##Update stimulation plot
+    ### Update stimulation plot
     def CalculateTheSignalPlot(self):
         y = [0]
         x0 = [0]
@@ -682,13 +715,17 @@ class UIController(QWidget):
                         x0.append(x0[-1]+(self._deadTimeButton[i].value()/1000))
                         y.append(0)
                 else:
+                    self._frequencyButton[i].setValue(1)
+                    self._frequencyButton[i].setDisabled(True)
+                    self._deadTimeButton[i].setValue(0)
+                    self._deadTimeButton[i].setDisabled(True)
                     x0.append(x0[-1])
                     y.append(1)
                     x0.append(x0[-1]+self._timeButton[i].value())
                     y.append(1)
         return x0, y
     
-    ### 更新設定訊號圖表
+    ### Renew the pre-set signal plot
     def RenewPlot(self, plot):
         plot.clear()
         x0 = self.CalculateTheSignalPlot()[0]
@@ -696,15 +733,9 @@ class UIController(QWidget):
         plot.plot().setData(x0, y, pen = "b")
         plot.setXRange(0,x0[-1])
         self.systemController.arduinoController.SensorResultDurationData["Signal"] = x0
-
-        for i in range(0, len(self._frequencyButton)):
-            if self.systemController.stimulationProtocol.GetAction() == 2:
-                self._frequencyButton[i].setValue(1)
-                self._frequencyButton[i].setDisabled(True)
-                self._deadTimeButton[i].setDisabled(True)
     
 
-    ### 更新實時訊號圖表
+    ### Renew the real-time signal plot
     def RenewSignalPlotInRealtime(self, plotInStimulation, plotInCamera, cameraPlot):
         if self._tab.currentIndex() == 2: 
             plotInCamera.clear()
@@ -732,12 +763,12 @@ class UIController(QWidget):
             plotInStimulation.plot().setData(x0[:self.lastIndex], self.systemController.arduinoController.SensorResultValueData["Signal"], pen = "b")
             plotInStimulation.setXRange(0,x0[-1])
 
-    ### 更新相機圖表
+    ### Renew the real-time contour plot
     def RenewContourPlotInRealtime(self):
         if  self._tab.currentIndex() == 2:
             self.contourPlot.plot().setData(self.systemController.videoController.frameThatMouseStayedInTheChamber, self.systemController.videoController.whichAreaMouseStayedDuringStimulation, pen = "b")
     
-    ##Purpose : Realtime renew sensor plot.
+    ### Renew the real-time sensor plots
     def RenewRealtimePlot(self):
         if  self._tab.currentIndex() == 3:
             for key in self._currentOpenSensorCheckbox:
@@ -764,7 +795,8 @@ class UIController(QWidget):
                         self._currentOpenSensorRealtimePlot[key].plot().setData(self.systemController.GetTimelineData(sensorType = key), self.systemController.GetValueData(sensorType = key), pen = "b")
                         if self.systemController.sensorDetectionProtocol.GetTheVauleOfIsSensorChangeSignal() == True:
                             self._currentOpenSensorRealtimePlot[key].plot().setData([0, self.totalDuration], [self. systemController.sensorDetectionProtocol.GetSensorThresholdData(sensorType = key), self. systemController.sensorDetectionProtocol.GetSensorThresholdData(sensorType = key)], pen ='r')
-    ### 將表格變為空白表格
+                        
+    ### Make the protocol table blank
     def RenewProtocolTableToBlank(self):
         self._rowHeader.clear()
         self._functionButton.clear()
@@ -782,7 +814,7 @@ class UIController(QWidget):
         self.RenewPlot(self._plot)
 
 
-    ### 將表格清空，數量歸零
+    ### Clear the protocol table
     def ClearAllProtocolTable(self):
         self._rowHeader.clear()
         self._functionButton.clear()
@@ -792,14 +824,14 @@ class UIController(QWidget):
         self._protocolTable.setColumnCount(0)
         self._protocolTable.setVerticalHeaderLabels(self._columnHeader)
     
-    ### 改變相機偵測型態
+    ### Change the contour detect type
     def ChangeContourDetectType(self, dropdown):
         self.systemController.videoController.ChangeContourDetect(dropdown.currentText())
         if self.systemController.videoController.GetCurrentContextString == "Pause":
             self.mediaStopButton.setText("Stop Detection System")
             self.mediaStopButton.setIcon(self.style().standardIcon(QStyle.SP_MediaStop))
     
-    ### 改變相機偵測行為型態
+    ### Change the mice behavior test
     def ChangeBehaviorType(self, dropdown):
         self.systemController.videoController.ChangeBehaviorTest(dropdown.currentText())
         self.contourDetectTypeDropdown.clear()
@@ -818,14 +850,14 @@ class UIController(QWidget):
             self.contourPixelsLabel.setText("Left Pixels Number: 0")
             self.areaStayDurationText.setText("Duration(L/M/R):" + str(self.systemController.videoController.GetLeftAreaStayDuration())+ "/" + str(self.systemController.videoController.GetMiddleAreaStayDuration())+ "/" + str(self.systemController.videoController.GetRightAreaStayDuration()))
     
-    ### 改變相機偵測顏色
+    ### Change the detect background color and mice color
     def ChangeContourThresholdColor(self, dropdown):
         if dropdown.currentText()== "White Background, Black Mice":
             self.systemController.videoController.SetContourDetectColor(255)
         else:
             self.systemController.videoController.SetContourDetectColor(0)
 
-    ### 停止相機
+    ### Stop video detection
     def StopVideo(self):
         if self.systemController.videoController.GetCurrentContextString() == "Pre-Detect":
             self.systemController.videoController.SetCurrentContextString("Calculate")
@@ -837,7 +869,7 @@ class UIController(QWidget):
             self.systemController.videoController.SetCurrentContextString("Stop")
             self.mediaStopButton.setText("Restart Detection System")
 
-    ### 停止系統
+    ### Stop Stimulation
     def StopSystem(self):
         self._timer.stop()
         self._realtimePlotTimer.stop()
@@ -856,7 +888,7 @@ class UIController(QWidget):
         self.totalDuration = 0
         self.lastIndex = 0
 
-    ### 開始系統
+    ### Start Stimulation
     def StartSystem(self):
         self.systemController.OutputStimulationSettingToArduino()
         self.systemController._eventSignal.clear()
@@ -876,7 +908,7 @@ class UIController(QWidget):
         self.DisableStimulationPage()
         self.systemController.stimulationProtocol.SetTotalDuration(0)
         self.systemController.SaveLastestParametersToCsvFile()
-        self.systemController.videoController.ClearTheStimulationResultData()
+        self.systemController.videoController.ClearCameraData()
         self._increment = 0
         self._currentStep = 0
         self._currentDuration = 0
@@ -890,7 +922,7 @@ class UIController(QWidget):
         self.systemController.videoController._currentContextString = "Detect"
         self.systemController.videoController.isResultVideoRecording = False
             
-    ### 重複刺激
+    ### Stimulation Running
     def RepeatStimulation(self):
         if self._increment == self._currentDuration:
             self._currentStep += 1
@@ -910,7 +942,7 @@ class UIController(QWidget):
             else:
                 self.stimulationStateLabel.setText("Mice is in the "+ self.systemController.videoController._miceCurrentPosition +" chamber. Stimulation Off.")
 
-    ### 選擇Arduino埠
+    ### Choose the Arduino port
     def ChooseArduinoPort(self):
         ports = self.systemController.arduinoController.GetCurrentPortsAvailable()
         comPort = self.systemController.arduinoController.GetComPort()
@@ -922,7 +954,7 @@ class UIController(QWidget):
 
         self.SetStopMessage(self.systemController.arduinoController.SetComPortAndSearchArduino(text = text))
 
-    ### 開啟相機頁面
+    ### Making the camera page able to be use
     def AbleCameraPage(self):
         self.mediaStopButton.setEnabled(False)
         self.playVideoButton.setEnabled(True)
@@ -934,7 +966,7 @@ class UIController(QWidget):
         self._loadButton.setEnabled(True)
         self.behaviorTypeDropDown.setEnabled(True)
 
-    ### 設定相機頁面為偵測模式
+    ### Making the camera page detection mode, can change the parameters but can't load another video file
     def SetCameraPageDetectMode(self):
         self.mediaStopButton.setEnabled(True)
         self.playVideoButton.setEnabled(False)
@@ -946,7 +978,7 @@ class UIController(QWidget):
         self._loadButton.setEnabled(False)
         self.behaviorTypeDropDown.setEnabled(True)
     
-    ### 關閉相機頁面
+    ### Making the camera page unable to be use
     def DisableCameraPage(self):
         self.mediaStopButton.setEnabled(False)
         self.playVideoButton.setEnabled(False)
@@ -958,12 +990,12 @@ class UIController(QWidget):
         self._loadButton.setEnabled(False)
         self.behaviorTypeDropDown.setEnabled(False)
 
-    ### 展示畫面
+    ### Show the current frame of the video on GUI
     def ShowFrame(self, revertColorFrame, width, height, bytesPerline):
         self.qFrameImage = QImage(revertColorFrame, width, height, bytesPerline, QImage.Format_RGB888)
         self.frameLabel.setPixmap(QPixmap.fromImage(self.qFrameImage))
 
-    ### 依照上次刺激參數調整UI
+    ### Put last parameter values in the GUI
     def SetUIWithLastestParameters(self):
         self._actionButton[self.systemController.stimulationProtocol._actionIndex].setChecked(True)
         if self.systemController.sensorDetectionProtocol._isSensorChangeSignal == True:
@@ -996,12 +1028,14 @@ class UIController(QWidget):
         self.leftContourThresholdInputField.setText(str(self.systemController.videoController._leftContourThreshold))
         self.rightContourThresholdInputField.setText(str(self.systemController.videoController._rightContourThreshold))
     
+    ### Set the camera page to calculate the video file but not stream
     def SetCameraUIPreCalculationStatus(self):
         self.clearPointButton.setEnabled(True)
         self.playVideoButton.setEnabled(True)
         self.mediaStopButton.setEnabled(True)
         self.mediaStopButton.setText("Start Calculate")
     
+    ### Show the current state of the stimulation
     def RenewInformInCalculationStatus(self, information):
         self.stimulationStateLabel.setText(information)
 
